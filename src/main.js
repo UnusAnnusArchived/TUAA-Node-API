@@ -10,7 +10,17 @@ function songIdError(docsurl) {
   return new Error(`Please provide a song id! (example: "01")\nPlease visit the documentation for more info: ${apiPath}/docs?page=${docsurl}`)
 }
 
-const unusannusarchive = {
+function genRequest(path, type) {
+  return new Promise((resolve, reject) => {
+    axios.get(path).then((res) => {
+      resolve(res.data)
+    }).catch((err) => {
+      reject(err)
+    })
+  })
+}
+
+const api = {
   setAPIPath(path) {
     if (path.endsWith('/')) return apiPath = path.substr(0, path.length-1)
     return apiPath = path
@@ -19,41 +29,41 @@ const unusannusarchive = {
   swift: {
     v1: {
       getallmetadata() {
-        return axios.get(`${apiPath}/swift/v1/getallmetadata`)
+        return genRequest(`${apiPath}/swift/v1/getallmetadata`)
       }
     }
   },
 
   v1: {
     getallmetadata() {
-      return axios.get(`${apiPath}/v1/getallmetadata`)
+      return genRequest(`${apiPath}/v1/getallmetadata`)
     },
 
     getallsongdata() {
-      return axios.get(`${apiPath}/v1/getallsongdata`)
+      return genRequest(`${apiPath}/v1/getallsongdata`)
     },
 
     gets00metadata() {
-      return axios.get(`${apiPath}/v1/gets00metadata`)
+      return genRequest(`${apiPath}/v1/gets00metadata`)
     },
 
     gets01metadata() {
-      return axios.get(`${apiPath}/v1/gets01metadata`)
+      return genRequest(`${apiPath}/v1/gets01metadata`)
     },
 
     getsongdata(songId) {
       if (!songId) throw songIdError('/api/v1/getsongdata')
-      return axios.get(`${apiPath}/v1/getsongdata/${songId}`)
+      return genRequest(`${apiPath}/v1/getsongdata/${songId}`)
     },
 
     getvideodata(videoId) {
       if (!videoId) throw videoIdError('/api/v1/getvideodata')
-      return axios.get(`${apiPath}/v1/getvideodata/${videoId}`)
+      return genRequest(`${apiPath}/v1/getvideodata/${videoId}`)
     },
 
     getvidpreviews(videoId) {
       if (!videoId) throw videoIdError('/api/v1/getvidpreviews')
-      return axios.get(`${apiPath}/v1/getvidpreviews/${videoId}`)
+      return genRequest(`${apiPath}/v1/getvidpreviews/${videoId}`)
     }
   },
 
@@ -61,44 +71,42 @@ const unusannusarchive = {
     metadata: {
       music: {
         all() {
-          return axios.get(`${apiPath}/v2/metadata/music/all`)
+          return genRequest(`${apiPath}/v2/metadata/music/all`)
         },
 
         song(songId) {
           if (!songId) throw songIdError('/api/v2/metadata/music/song')
-          return axios.get(`${apiPath}/v2/metadata/music/song/${songId}`)
+          return genRequest(`${apiPath}/v2/metadata/music/song/${songId}`)
         }
       },
 
       video: {
         season: {
           s00() {
-            return axios.get(`${apiPath}/v2/metadata/video/season/s00`)
+            return genRequest(`${apiPath}/v2/metadata/video/season/s00`)
           },
 
           s01() {
-            return axios.get(`${apiPath}/v2/metadata/video/season/s01`)
+            return genRequest(`${apiPath}/v2/metadata/video/season/s01`)
           }
         },
 
         all() {
-          return axios.get(`${apiPath}/v2/metadata/video/all`)
+          return genRequest(`${apiPath}/v2/metadata/video/all`)
         },
         
         episode(videoId) {
           if (!videoId) throw videoIdError('/api/v2/metadata/video/episode')
-          return axios.get(`${apiPath}/v2/metadata/video/episode/${videoId}`)
+          return genRequest(`${apiPath}/v2/metadata/video/episode/${videoId}`)
         }
       }
     },
 
     preview(videoId) {
       if (!videoId) throw videoIdError('/api/v2/preview')
-      return axios.get(`${apiPath}/v2/preview/${videoId}`)
+      return genRequest(`${apiPath}/v2/preview/${videoId}`)
     }
   }
 }
 
-module.exports = unusannusarchive
-
-export default unusannusarchive
+module.exports = api
