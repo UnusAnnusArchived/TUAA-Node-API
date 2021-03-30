@@ -1,0 +1,27 @@
+{
+  "name": "unusannusarchive",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/main.js",
+  "keywords": [
+    "unus",
+    "annus",
+    "archive",
+    "archival",
+    "markiplier",
+    "crankgameplays",
+    "mark",
+    "ethan",
+    "rest",
+    "api"
+  ],
+  "author": {
+    "name": "The Unus Annus Archive",
+    "url": "https://www.unusannusarchive.tk/",
+    "email": "contact@unusannusarchive.tk"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.21.1"
+  }
+}
