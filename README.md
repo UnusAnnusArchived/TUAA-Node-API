@@ -1,4 +1,6 @@
-# UnusAnnusArchive-Node-API
-A Node.JS API for "[The Unus Annus Archive](https://www.unusannusarchive.tk)"
+# TUAA-Node-API
 
-[View this package on npmjs.com](https://www.npmjs.com/package/unusannusarchive)
+A Node.JS API for [The Unus Annus Archive](https://unusann.us)
+
+* Fully typed
+* In-editor documentation
