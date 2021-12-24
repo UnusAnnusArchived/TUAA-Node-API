@@ -222,7 +222,7 @@ export default class TUAA {
           } else {
             From = from
           }
-          query = `from=${from}`
+          query += `from=${From}`
         }
         if (to) {
           var To:string
@@ -231,7 +231,7 @@ export default class TUAA {
           } else {
             To = to
           }
-          query = `to=${to}`
+          query += `to=${To}`
         }
 
         if (query === '?') {
@@ -258,37 +258,37 @@ export default class TUAA {
         /**
          * This endpoint returns an array of all the episodes in season 0 (specials), in order.
          * 
-         * More info: https://api.unusann.us/docs/?page=/api/v2/metadata/video/season/s00
+         * More info: https://api.unusann.us/docs/?page=/api/v2/metadata/season/s00
          */
         s00():Promise<Array<Episode&OldEpisode>> {
-          return makeRequest(`${apiUrl}/v2/metadata/video/season/s00`)
+          return makeRequest(`${apiUrl}/v2/metadata/season/s00`)
         },
         /**
          * This endpoint returns an array of all the episodes in season 1, in order.
          * 
-         * More info: https://api.unusann.us/docs/?page=/api/v2/metadata/video/season/s01
+         * More info: https://api.unusann.us/docs/?page=/api/v2/metadata/season/s01
          */
         s01():Promise<Array<Episode&OldEpisode>> {
-          return makeRequest(`${apiUrl}/v2/metadata/video/season/s01`)
+          return makeRequest(`${apiUrl}/v2/metadata/season/s01`)
         }
       },
       /**
        * This endpoint returns an array, with another nested array for each season, which contains all the video objects for that season, in order.
        * 
-       * More info: https://api.unusann.us/docs/?page=/api/v2/metadata/video/all
+       * More info: https://api.unusann.us/docs/?page=/api/v2/metadata/all
        */
       all():Promise<Array<Episode&OldEpisode>[]> {
-        return makeRequest(`${apiUrl}/v2/metadata/video/all`)
+        return makeRequest(`${apiUrl}/v2/metadata/all`)
       },
       /**
        * This endpoint accepts a video id as an argument and returns the specified video object.
        * 
        * An example call of this function would be `TUAA.v2.metadata.video.episode('s01.e001')
        * 
-       * More info: https://api.unusann.us/docs/?page=/api/v2/metadata/video/episode
+       * More info: https://api.unusann.us/docs/?page=/api/v2/metadata/episode
        */
       episode(videoId:string):Promise<Episode&OldEpisode> {
-        return makeRequest(`${apiUrl}/v2/metadata/video/episode/${videoId}`)
+        return makeRequest(`${apiUrl}/v2/metadata/episode/${videoId}`)
       }
     },
     /**

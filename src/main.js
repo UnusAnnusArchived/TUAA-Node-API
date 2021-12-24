@@ -251,7 +251,7 @@ var TUAA = /** @class */ (function () {
                         else {
                             From = from;
                         }
-                        query = "from=".concat(from);
+                        query += "from=".concat(From);
                     }
                     if (to) {
                         var To;
@@ -261,7 +261,7 @@ var TUAA = /** @class */ (function () {
                         else {
                             To = to;
                         }
-                        query = "to=".concat(to);
+                        query += "to=".concat(To);
                     }
                     if (query === '?') {
                         query = '';
@@ -286,37 +286,37 @@ var TUAA = /** @class */ (function () {
                     /**
                      * This endpoint returns an array of all the episodes in season 0 (specials), in order.
                      *
-                     * More info: https://api.unusann.us/docs/?page=/api/v2/metadata/video/season/s00
+                     * More info: https://api.unusann.us/docs/?page=/api/v2/metadata/season/s00
                      */
                     s00: function () {
-                        return makeRequest("".concat(apiUrl, "/v2/metadata/video/season/s00"));
+                        return makeRequest("".concat(apiUrl, "/v2/metadata/season/s00"));
                     },
                     /**
                      * This endpoint returns an array of all the episodes in season 1, in order.
                      *
-                     * More info: https://api.unusann.us/docs/?page=/api/v2/metadata/video/season/s01
+                     * More info: https://api.unusann.us/docs/?page=/api/v2/metadata/season/s01
                      */
                     s01: function () {
-                        return makeRequest("".concat(apiUrl, "/v2/metadata/video/season/s01"));
+                        return makeRequest("".concat(apiUrl, "/v2/metadata/season/s01"));
                     }
                 },
                 /**
                  * This endpoint returns an array, with another nested array for each season, which contains all the video objects for that season, in order.
                  *
-                 * More info: https://api.unusann.us/docs/?page=/api/v2/metadata/video/all
+                 * More info: https://api.unusann.us/docs/?page=/api/v2/metadata/all
                  */
                 all: function () {
-                    return makeRequest("".concat(apiUrl, "/v2/metadata/video/all"));
+                    return makeRequest("".concat(apiUrl, "/v2/metadata/all"));
                 },
                 /**
                  * This endpoint accepts a video id as an argument and returns the specified video object.
                  *
                  * An example call of this function would be `TUAA.v2.metadata.video.episode('s01.e001')
                  *
-                 * More info: https://api.unusann.us/docs/?page=/api/v2/metadata/video/episode
+                 * More info: https://api.unusann.us/docs/?page=/api/v2/metadata/episode
                  */
                 episode: function (videoId) {
-                    return makeRequest("".concat(apiUrl, "/v2/metadata/video/episode/").concat(videoId));
+                    return makeRequest("".concat(apiUrl, "/v2/metadata/episode/").concat(videoId));
                 }
             },
             /**
