@@ -1,14 +1,13 @@
-import fs from 'fs';
+import fs from "fs";
 export default class TUAA {
     constructor();
     changeApiUrl(url: string): string;
-    changeCdnUrl(url: string): string;
     roku: {
         v1: {
             /**
-             * This endpoint provides the roku specified feed format for the roku app.
+             * This endpoint provides the Roku specified feed format for the Roku app.
              *
-             * More info: https://api.unusann.us/docs/?page=/api/roku/v1/feed
+             * More info: https://docs.unusann.us/reference/api/roku/v1/feed
              */
             feed(): Promise<RokuFeed>;
         };
@@ -16,35 +15,11 @@ export default class TUAA {
     swift: {
         v1: {
             /**
-             * This is just a modified version of `TUAA.v1.getallmetadata()` that was added while the Swift app was being developed.
+             * This is just a modified version of `/v1/getallmetadata` that was added while the Swift app was being developed.
              *
-             * The only thing different about it is that it outputs an object with 2 keys that contain an array instead of an array containing 2 other arrays.
+             * The only thing different about it is that it outputs an object with two keys that contain arrays instead of an array containing 2 other arrays.
              *
-             * `TUAA.v1.getallmetadata()`:
-             * ```json
-             *  [
-             *    [
-             *      "season 0"
-             *    ],
-             *    [
-             *      "season 1"
-             *    ]
-             *  ]
-             * ```
-             *
-             * `TUAA.swift.v1.getallmetadata()`:
-             * ```json
-             *  {
-             *    "specials": [
-             *      "season 0"
-             *    ],
-             *    "season1": [
-             *      "season 1"
-             *    ]
-             *  }
-             * ```
-             *
-             * More info: https://api.unusann.us/docs/?page=/api/swift/v1/getallmetadata
+             * More info: https://docs.unusann.us/reference/api/swift/v1/getallmetadata
              */
             getallmetadata(): Promise<SwiftGetAllMetadata>;
         };
@@ -53,212 +28,222 @@ export default class TUAA {
         /**
          * This endpoint returns an array, with another nested array for each season, which contains all the video objects for that season, in order.
          *
-         * More info: https://api.unusann.us/docs/?page=/api/v1/getallmetadata
-        */
+         * More info: https://docs.unusann.us/reference/api/v1/getallmetadata
+         */
         getallmetadata(): Promise<Array<Episode & OldEpisode>[]>;
         /**
          * This endpoint returns an array of all the episodes in season 0 (specials), in order.
          *
-         * More info: https://api.unusann.us/docs/?page=/api/v1/gets00metadata
-        */
+         * More info: https://docs.unusann.us/reference/api/v1/gets00metadata
+         */
         gets00metadata(): Promise<Array<Episode & OldEpisode>>;
         /**
          * This endpoint returns an array of all the episodes in season 1, in order.
          *
-         * More info: https://api.unusann.us/docs/?page=/api/v1/gets01metadata
-        */
+         * More info: https://docs.unusann.us/reference/api/v1/gets01metadata
+         */
         gets01metadata(): Promise<Array<Episode & OldEpisode>>;
         /**
-         * This endpoint accepts a video id as an argument and returns the specified video object.
+         * This endpoint accepts a video ID as a path parameter and returns the specified video object.
          *
-         * An example call of this function would be `TUAA.v1.getvideodata('s01.e001)`
+         * An example request path would be `/v1/getmetadata/s01.e001`.
          *
-         * More info: https://api.unusann.us/docs/?page=/api/v1/getvideodata
+         * More info: https://docs.unusann.us/reference/api/v1/getvideodata
+         *
+         * @param video String; Unus Annus video ID. Example: `s01.e001`; Required parameter
          */
-        getvideodata(videoId: string): Promise<Episode & OldEpisode>;
+        getvideodata(video: string): Promise<Episode & OldEpisode>;
         /**
-         * This endpoint accepts a video id as an argument and returns the specified previews in the `WEBVTT` format.
+         * This endpoint accepts a video ID as a path parameter and returns the specified previews in the WEBVTT format.
          *
-         * An example call of this function would be `TUAA.v1.getvidpreviews('s01.e001')`
+         * An example request path would be `/v1/getvidpreviews/s01.e001`.
          *
-         * More info: https://api.unusann.us/docs/?page=/api/v1/getvidpreviews
+         * More info: https://docs.unusann.us/reference/api/v1/getvidpreviews
+         *
+         * @param video String; Unus Annus video ID. Example: `s01.e001`; Required parameter
          */
-        getvidpreviews(videoId: string): Promise<string>;
+        getvidpreviews(video: string): Promise<string>;
     };
     v2: {
         account: {
+            videoprogress: {
+                /**
+                 * Get the user's video progress for the specified episode.
+                 *
+                 * **THIS ENDPOINT IS NOT FULLY IMPLEMENTED YET**
+                 *
+                 * More info: https://docs.unusann.us/reference/api/v2/account/videoprogress#get-video-progress
+                 *
+                 * @param uid String; 32 character user ID; Required parameter
+                 * @param loginKey String; 16 character login key/token; Required parameter
+                 * @param uaid String; Unus Annus video ID. Example `s01.e001`; Required parameter
+                 */
+                get(uid: string, loginKey: string, uaid: string): Promise<VideoProgress>;
+                /**
+                 * Set the user's video progress for the specified episode.
+                 *
+                 * **THIS ENDPOINT IS NOT FULLY IMPLEMENTED YET**
+                 *
+                 * More info: https://docs.unusann.us/reference/api/v2/account/videoprogress#set-video-progress
+                 *
+                 * @param uid String; 32 character user ID; Required parameter
+                 * @param loginKey String; 16 character login key/token; Required parameter
+                 * @param uaid String; Unus Annus video ID. Example `s01.e001`; Required parameter
+                 * @param progress Integer; Amount of seconds watched in video; Required parameter
+                 */
+                set(uid: string, loginKey: string, uaid: string, progress: number): Promise<VideoProgress>;
+            };
             /**
-             * This endpoint accepts a POST request with the `multipart/form-data` encoding type.
+             * Changes the user's profile picture
              *
-             * It accepts a file input which is a file upload of the profile picture, and a `loginKey` input which contains the loginKey in plaintext.
+             * More info: https://docs.unusann.us/reference/api/v2/account/changepfp
              *
-             * You can also add a redirect query variable to the request to make it redirect to a certain page instead of sending a response.
-             *
-             * More info: https://api.unusann.us/docs/?page=/api/v2/account/changepfp
+             * @param pfp ReadStream | Path to file; Image file attached to body; Required parameter
+             * @param loginKey 16 character login key/token; Required parameter
              */
             changepfp(pfp: fs.ReadStream | string, loginKey: string): Promise<ChangePFPResponse>;
             /**
-             * This endpoint accepts a `POST` request with the `application/json` encoding type.
+             * Check the user's login key to see if they're logged in
              *
-             * It accepts a `loginKey` in the JSON body which contains the user's login key.
+             * More info: https://docs.unusann.us/reference/api/v2/account/checkloginkey
              *
-             * More info: https://api.unusann.us/docs/?page=/api/v2/account/checkloginkey
+             * @param loginKey String; 16 character login key/token; Required parameter
              */
             checkloginkey(loginKey: string): Promise<CheckLoginKeyResponse>;
             /**
-             * This endpoint accepts a `POST` request with the `application/json` encoding type.
+             * More info: https://docs.unusann.us/reference/api/v2/account/login
              *
-             * It accepts a `username` and `password` in the JSON body.
-             *
-             * More info: https://api.unusann.us/docs/?page=/api/v2/account/login
+             * @param username String; The user's username or email. If this field has an @ symbol in it, it will be processed as an email; otherwise it will be processed as a username. Required parameter
+             * @param password String; Required parameter
+             * @param sendEmail Boolean; Whether to send an email to the user after they login. This is always true unless the user creates an account for the first time. Optional parameter; will default to `true` if not provided.
              */
-            login(username: string, password: string): Promise<LoginResponse>;
+            login(username: string, password: string, sendEmail?: boolean): Promise<LoginResponse>;
             /**
-             * This endpoint accepts a `POST` request with the `application/json` encoding type.
+             * More info: https://docs.unusann.us/reference/api/v2/account/logout
              *
-             * It accepts an `id` value containing the user ID, and a `loginKey` containing the login key you want to logout.
-             *
-             * More info: https://api.unusann.us/docs/?page=/api/v2/account/logout
+             * @param loginKeys String[]; Array of 16 character login keys/tokens to logout or `["*"]` to logout all. Either this parameter, or `loginKey` is required in the request.
+             * @param loginKey String; 16 character login key/token to logout singular device. Either this parameter, or `loginKeys` is required in the request.
+             * @param id String; 32 character user ID; Required parameter
              */
-            logout(id: string, loginKey: string): Promise<LogoutResponse>;
+            logout(id: string, loginKeys?: string[], loginKey?: string): Promise<LogoutResponse>;
             /**
-             * This endpoint accepts a `POST` request with the `application/json` encoding type.
+             * More info: https://docs.unusann.us/reference/api/v2/account/signup
              *
-             * It accepts an `id` value containing the user ID of the user you'd like to remove all logins from.
-             *
-             * More info: https://api.unusann.us/docs/?page=/api/v2/account/logoutall
-             */
-            logoutall(id: string): Promise<LogoutResponse>;
-            /**
-             * This endpoint accepts a `POST` request with the `application/json` encoding type.
-             *
-             * It accepts the following values in the JSON body: `email`, `username`, `password`, and `confirmpassword`
-             *
-             * More info: https://api.unusann.us/docs/?page=/api/v2/account/signup
+             * @param email String; The user's email address; Required parameter
+             * @param username String; The user's username; Required parameter
+             * @param password String; The user's password; Required parameter
+             * @param confirmpassword String; The user's password again as confirmation that it's correct. Required parameter
              */
             signup(email: string, username: string, password: string, confirmpassword: string): Promise<SignupResponse>;
         };
         comments: {
             /**
-             * This endpoint accepts a video id as an argument and returns an array of comment objects.
+             * Gets a segmented list of comments from the specified video
              *
-             * It also has optional `from` and `to` query variables that control how many comments get sent.
+             * More info: https://docs.unusann.us/reference/api/v2/comments#get-comments
              *
-             * An example call of this function would be `TUAA.v2.comments.get('s01.e001', 0, 20)`.
-             *
-             * Another example could be `TUAA.v2.comments.get('s01.e002', '0', '20')`.
-             *
-             * And another could be `TUAA.v2.comments.get('s01.e003')`, which would default to from being `0` and to being `20`
-             *
-             * More info: https://api.unusann.us/docs/?page=/api/v2/comments/get
+             * @param video String; Unus Annus video ID. Example: `s01.e001`; Required parameter
+             * @param from Integer | String; Select the first index for the segment of comments to recieve. Optional parameter; defaults to `0`
+             * @param to Integer | String; Selects the last index for the segment of comments to recieve. Optional parameter; defaults to `20`
              */
-            get(videoId: string, from?: number | string, to?: number | string): Promise<Comment[]>;
+            get(video: string, from?: number | string, to?: number | string): Promise<Comment[]>;
             /**
-             * This endpoint accepts a `POST` request with the `application/json` encoding type.
+             * Posts a comment on the specified video
              *
-             * It accepts  a `loginKey` and a `comment` (a plaintext string of the comment's text)
+             * More info: https://docs.unusann.us/reference/api/v2/comments#post-comment
              *
-             * An example call of this function would be `TUAA.v2.comments.post('s01.e001')
-             *
-             * More info: https://api.unusann.us/docs/?page=/api/v2/comments/post
+             * @param video String; Unus Annus video ID. Example: `s01.e001`; Required parameter
+             * @param comment String; Comment data. Limited Markdown is accepted. Required parameter
+             * @param loginKey String; 16 character login key/token; Required parameter
              */
-            post(videoId: string, comment: string, loginKey: string): Promise<PostCommentResponse>;
+            post(video: string, comment: string, loginKey: string): Promise<PostCommentResponse>;
         };
         metadata: {
             season: {
                 /**
                  * This endpoint returns an array of all the episodes in season 0 (specials), in order.
                  *
-                 * More info: https://api.unusann.us/docs/?page=/api/v2/metadata/season/s00
+                 * More info: https://docs.unusann.us/reference/api/v2/metadata/season#get-specials-metadata
                  */
                 s00(): Promise<Array<Episode & OldEpisode>>;
                 /**
                  * This endpoint returns an array of all the episodes in season 1, in order.
                  *
-                 * More info: https://api.unusann.us/docs/?page=/api/v2/metadata/season/s01
+                 * More info: https://docs.unusann.us/reference/api/v2/metadata/season#get-season-1-metadata
                  */
                 s01(): Promise<Array<Episode & OldEpisode>>;
             };
             /**
              * This endpoint returns an array, with another nested array for each season, which contains all the video objects for that season, in order.
              *
-             * More info: https://api.unusann.us/docs/?page=/api/v2/metadata/all
+             * More info: https://docs.unusann.us/reference/api/v2/metadata/all
              */
             all(): Promise<Array<Episode & OldEpisode>[]>;
             /**
-             * This endpoint accepts a video id as an argument and returns the specified video object.
+             * This endpoint accepts a video ID as a path parameter and returns the specified video object.
              *
-             * An example call of this function would be `TUAA.v2.metadata.video.episode('s01.e001')
+             * An example request would be `TUAA.v2.metadata.episode("s01.e001")`
              *
-             * More info: https://api.unusann.us/docs/?page=/api/v2/metadata/episode
+             * More info: https://docs.unusann.us/reference/api/v2/metadata/episode
+             *
+             * @param video String; Unus Annus video ID. Example `s01.e001`; Required parameter
              */
-            episode(videoId: string): Promise<Episode & OldEpisode>;
+            episode(video: string): Promise<Episode & OldEpisode>;
         };
         /**
-         * This endpoint accepts a video id as a url argument and returns the specified previews in the WEBVTT format.
+         * This endpoint accepts a video ID as a path parameter and returns the specified previews in the WEBVTT format.
          *
-         * An example call of this function would be `TUAA.v2.preview('s01.e001')`
+         * An example call of this function would be `TUAA.v2.preview("s01.e001")`
          *
-         * More info: https://api.unusann.us/docs/?page=/api/v2/preview
+         * More info: https://docs.unusann.us/reference/api/v2/preview
+         *
+         * @param video String; Unus Annus video ID; Example: `s01.e001`; Required parameter
          */
-        preview(videoId: string): Promise<string>;
+        preview(video: string): Promise<string>;
     };
     /**
-     * This gets the download url for a video from it's video id a specified resolution.
+     * More info: https://docs.unusann.us/reference/api/subtitles
      *
-     * The generated url will send the file with `content-disposition` set to `attachment`, and `content-type` set to `application/octet-stream` so the browser will download it instead of displaying it inline.
+     * @param url String
      *
-     * You can also provide an optional filename, which will set `content-disposition` to `attachment; filename=<filename>` so the browser will download the file with a custom filename.
+     * Path to subtitles. Example: ```https://usc1.contabostorage.com/a7f68355d8c442d8a7a1076a0ac5d924:videos/subs/01/001.en.vtt```
+     *
+     * Only accepts the following patterns:
+     * * `https://usc1.contabostorage.com/a7f68355d8c442d8a7a1076a0ac5d924:videos/subs/*`
+     * * `https://cdn.unusann.us/subs/*`
+     * * `https://cdn.unusannusarchive.tk/subs/*`
+     *
+     * Required parameter
      */
-    getVideoDownloadPathFromVideoID(videoId: string, filename?: string): Promise<string>;
-    /**
-     * This gets the download url for a video from a video url.
-     *
-     * The generated url will send the file with `content-disposition` set to `attachment`, and `content-type` set to `application/octet-stream` so the browser will download it instead of displaying it inline.
-     *
-     * You can also provide an optional filename, which will set `content-disposition` to `attachment; filename=<filename>` so the browser will download the file with a custom filename.
-     */
-    getVideoDownloadPathFromVideoURL(videoURL: string, filename?: string): string;
-    /**
-     * This runs ffprobe on the specified cdn video path
-     *
-     * To find the cdn video path, go to https://cdn.unusann.us and browse for the video, then take the current path (will start with a `/`), and use it here.
-     *
-     * More info: https://api.unusann.us/docs/?page=/ffprobe
-     */
-    ffprobe(videoPath: string): Promise<string>;
-    /**
-     * This gets the size of the specified file/folder on the cdn.
-     *
-     * To get a path on the cdn, go to https://cdn.unusann.us and browse for the folder/file you want, then take the current path (will start with a `/`) and use it here.
-     *
-     * More info: https://api.unusann.us/docs/?page=/filesize
-     */
-    filesize(path: string): Promise<FileSizeResponse>;
+    subtitles(url: string): Promise<string>;
+}
+export interface VideoProgress {
+    uaid: string;
+    progress: number;
 }
 export interface RokuFeed {
-    providerName: 'The Unus Annus Archive';
+    providerName: "The Unus Annus Archive";
     lastUpdated: string;
-    language: 'en';
+    language: "en";
     playlists: RokuPlaylist[];
     series: RokuSeries[];
 }
 export interface RokuPlaylist {
-    name: 'Specials' | 'Season 1';
+    name: "Specials" | "Season 1";
     itemIds: string[];
 }
 export interface RokuSeries {
-    id: 'UnusAnnus';
-    title: 'Unus Annus';
+    id: "UnusAnnus";
+    title: "Unus Annus";
     seasons: RokuSeason[];
-    genres: ['comedy'];
-    thumbnail: 'https://cdn.unusann.us/roku-assets/series-thumbnail.jpg';
-    releaseDate: '2019-11-15';
+    genres: ["comedy"];
+    thumbnail: "https://cdn.unusann.us/roku-assets/series-thumbnail.jpg";
+    releaseDate: "2019-11-15";
     shortDescription: '"What would you do if you only had a year left to live? Would you squander the time you were given? Or would you make every second count? Welcome to Unus Annus. In exactly 365 days this channel will be...';
-    longDescription: 'What would you do if you only had a year left to live? Would you squander the time you were given? Or would you make every second count? Welcome to Unus Annus. In exactly 365 days this channel will be deleted along with all of the daily uploads accumulated since then. Nothing will be saved. Nothing will be reuploaded. This is your one chance to join us at the onset of our adventure. To be there from the beginning. To make every second count. Subscribe now and relish what little time we have left or have the choice made for you as we disappear from existence forever. But remember... everything has an end. Even you. Memento mori. Unus annus.';
+    longDescription: "What would you do if you only had a year left to live? Would you squander the time you were given? Or would you make every second count? Welcome to Unus Annus. In exactly 365 days this channel will be deleted along with all of the daily uploads accumulated since then. Nothing will be saved. Nothing will be reuploaded. This is your one chance to join us at the onset of our adventure. To be there from the beginning. To make every second count. Subscribe now and relish what little time we have left or have the choice made for you as we disappear from existence forever. But remember... everything has an end. Even you. Memento mori. Unus annus.";
 }
 export interface RokuSeason {
-    seasonNumber: '0' | '1';
+    seasonNumber: "0" | "1";
     episodes: RokuEpisode[];
 }
 export interface RokuEpisode {
@@ -268,7 +253,7 @@ export interface RokuEpisode {
     thumbnail: string;
     releaseDate: string;
     episodeNumber: number;
-    shortDescription: 'This episode doesn\'t have a description' | string;
+    shortDescription: "This episode doesn't have a description" | string;
     longDescription?: string;
 }
 export interface RokuEpisodeContent {
@@ -276,17 +261,17 @@ export interface RokuEpisodeContent {
     videos: RokuVideo[];
     duration: number;
     captions: RokuCaption[];
-    language: 'en';
+    language: "en";
 }
 export interface RokuVideo {
     url: string;
-    quality: 'UHD' | 'FHD' | 'HD' | 'SD';
-    videoType: 'MP4';
+    quality: "UHD" | "FHD" | "HD" | "SD";
+    videoType: "MP4";
 }
 export interface RokuCaption {
     url: string;
     language: string;
-    captionType: 'SUBTITLE';
+    captionType: "SUBTITLE";
 }
 export interface SwiftGetAllMetadata {
     specials: Array<Episode & OldEpisode>;
@@ -306,18 +291,18 @@ export interface Episode {
 }
 export interface Source {
     src: string;
-    type: 'video/mp4';
+    type: "video/mp4";
     size: number;
 }
 export interface Track {
-    kind: 'captions';
+    kind: "captions";
     label: string;
     srclang: string;
     src: string;
 }
 export interface Poster {
     src: string;
-    type: 'image/webp' | 'image/jpeg';
+    type: "image/webp" | "image/jpeg";
 }
 export interface OldEpisode {
     video: string;
@@ -340,8 +325,8 @@ export interface Song {
     islastsong?: boolean;
 }
 export interface ChangePFPResponse {
-    status?: 'success' | string;
-    error?: 'Not logged in!' | string;
+    status?: "success" | string;
+    error?: "Not logged in!" | string;
 }
 export interface CheckLoginKeyResponse {
     isValid: boolean;
@@ -358,7 +343,7 @@ export interface UserPFP {
     filename: string;
     width: number;
     height: number;
-    format: 'image/jpeg';
+    format: "image/jpeg";
 }
 export interface LoginResponse {
     isValid?: boolean;
@@ -366,15 +351,15 @@ export interface LoginResponse {
     user?: LimitedUser;
 }
 export interface LogoutResponse {
-    status: 'success' | 'error';
-    error?: 'Account does not exist!' | string;
+    status: "success" | "error";
+    error?: "Account does not exist!" | string;
 }
 export interface SignupResponse {
     success: boolean;
-    loginURI?: '/api/v2/account/login';
+    loginURI?: "/api/v2/account/login";
     error?: {
         code: 0 | 1 | 2 | number;
-        message: 'Passwords do not match!' | 'Account exists!' | 'Missing info!' | string;
+        message: "Passwords do not match!" | "Account exists!" | "Missing info!" | string;
     };
 }
 export interface Comment {
@@ -399,11 +384,11 @@ export interface CommentUser {
     pfp: UserPFP;
 }
 export interface PostCommentResponse {
-    status?: 'success';
+    status?: "success";
     comment?: Comment;
     error?: {
-        code: 3 | '401' | number | string;
-        message: 'Invalid message length!' | 'Unauthorized!' | string;
+        code: 3 | "401" | number | string;
+        message: "Invalid message length!" | "Unauthorized!" | string;
     };
 }
 export interface FileSizeResponse {
