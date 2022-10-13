@@ -1,327 +1,717 @@
 import axios from "axios";
 import FormData from "form-data";
 import fs from "fs";
-
-var apiUrl = "https://unusann.us/api";
+import PocketBase from "pocketbase";
+import moment from "moment";
+import type { User } from "pocketbase";
+import { CommentSortTypes, EmailPreferences, Episode, RokuFeed, SwiftGetAllMetadata } from "./types";
 
 export default class TUAA {
-  constructor() {}
+  pb: PocketBase;
+  pbUser: User;
+  apiUrl: string;
 
-  changeApiUrl(url: string) {
-    return (apiUrl = url);
+  constructor(pocketBaseUrl: string = "https://db.unusann.us", apiUrl: string = "https://unusann.us/api") {
+    this.pb = new PocketBase(pocketBaseUrl);
+    this.apiUrl = apiUrl;
   }
 
-  roku = {
+  endpoints = {
+    roku: {
+      v1: {
+        /**
+         * ### Roku Feed
+         * #### `/roku/v1/feed`
+         *
+         * This endpoint provides the Roku specified feed format for the Roku app.
+         *
+         * @returns
+         * * 200: OK
+         *   * Type: `Promise<RokuFeed>`
+         *   * Will return with ~12k lines of JSON with info about every video.
+         *
+         * @see {@link https://docs.unusann.us/endpoints/api/roku/v1/feed}
+         */
+        feed: () => {
+          return makeRequest<RokuFeed>(`${this.apiUrl}/roku/v1/feed`);
+        },
+      },
+    },
+    swift: {
+      v1: {
+        /**
+         * ### Swift Get All Metadata
+         * #### `/swift/v1/getallmetadata`
+         *
+         * This is just a modified version of `/v1/getallmetadata` that was added while the Swift app was being developed.
+         *
+         * The only thing different about it is that it outputs an object with two keys that contain arrays instead of an array containing 2 other arrays.
+         *
+         * @returns
+         * * 200: OK
+         *   * `Promise<SwiftGetAllMetadata>`
+         *
+         * @see {@link https://docs.unusann.us/endpoints/api/swift/v1/getallmetadata}
+         */
+        getallmetadata: () => {
+          return makeRequest<SwiftGetAllMetadata>(`${this.apiUrl}/swift/v1/getallmetadata`);
+        },
+      },
+    },
     v1: {
       /**
-       * This endpoint provides the Roku specified feed format for the Roku app.
+       * ### Get All Metadata
+       * #### `/v1/getallmetadata`
        *
-       * More info: https://docs.unusann.us/reference/api/roku/v1/feed
-       */
-      feed(): Promise<RokuFeed> {
-        return makeRequest(`${apiUrl}/roku/v1/feed`);
-      },
-    },
-  };
-
-  swift = {
-    v1: {
-      /**
-       * This is just a modified version of `/v1/getallmetadata` that was added while the Swift app was being developed.
-       *
-       * The only thing different about it is that it outputs an object with two keys that contain arrays instead of an array containing 2 other arrays.
-       *
-       * More info: https://docs.unusann.us/reference/api/swift/v1/getallmetadata
-       */
-      getallmetadata(): Promise<SwiftGetAllMetadata> {
-        return makeRequest(`${apiUrl}/swift/v1/getallmetadata`);
-      },
-    },
-  };
-
-  v1 = {
-    /**
-     * This endpoint returns an array, with another nested array for each season, which contains all the video objects for that season, in order.
-     *
-     * More info: https://docs.unusann.us/reference/api/v1/getallmetadata
-     */
-    getallmetadata(): Promise<Array<Episode & OldEpisode>[]> {
-      return makeRequest(`${apiUrl}/v1/getallmetadata`);
-    },
-    /**
-     * This endpoint returns an array of all the episodes in season 0 (specials), in order.
-     *
-     * More info: https://docs.unusann.us/reference/api/v1/gets00metadata
-     */
-    gets00metadata(): Promise<Array<Episode & OldEpisode>> {
-      return makeRequest(`${apiUrl}/v1/gets00metadata`);
-    },
-    /**
-     * This endpoint returns an array of all the episodes in season 1, in order.
-     *
-     * More info: https://docs.unusann.us/reference/api/v1/gets01metadata
-     */
-    gets01metadata(): Promise<Array<Episode & OldEpisode>> {
-      return makeRequest(`${apiUrl}/v1/gets01metadata`);
-    },
-    /**
-     * This endpoint accepts a video ID as a path parameter and returns the specified video object.
-     *
-     * An example request path would be `/v1/getmetadata/s01.e001`.
-     *
-     * More info: https://docs.unusann.us/reference/api/v1/getvideodata
-     *
-     * @param video String; Unus Annus video ID. Example: `s01.e001`; Required parameter
-     */
-    getvideodata(video: string): Promise<Episode & OldEpisode> {
-      return makeRequest(`${apiUrl}/v1/getvideodata/${video}`);
-    },
-    /**
-     * This endpoint accepts a video ID as a path parameter and returns the specified previews in the WEBVTT format.
-     *
-     * An example request path would be `/v1/getvidpreviews/s01.e001`.
-     *
-     * More info: https://docs.unusann.us/reference/api/v1/getvidpreviews
-     *
-     * @param video String; Unus Annus video ID. Example: `s01.e001`; Required parameter
-     */
-    getvidpreviews(video: string): Promise<string> {
-      return makeRequest(`${apiUrl}/v1/getvidpreviews/${video}`);
-    },
-  };
-
-  v2 = {
-    account: {
-      videoprogress: {
-        /**
-         * Get the user's video progress for the specified episode.
-         *
-         * **THIS ENDPOINT IS NOT FULLY IMPLEMENTED YET**
-         *
-         * More info: https://docs.unusann.us/reference/api/v2/account/videoprogress#get-video-progress
-         *
-         * @param uid String; 32 character user ID; Required parameter
-         * @param loginKey String; 16 character login key/token; Required parameter
-         * @param uaid String; Unus Annus video ID. Example `s01.e001`; Required parameter
-         */
-        get(uid: string, loginKey: string, uaid: string): Promise<VideoProgress> {
-          return makePOSTRequest(`${apiUrl}/v2/account/videoprogress/get`, { uid, loginKey, uaid });
-        },
-        /**
-         * Set the user's video progress for the specified episode.
-         *
-         * **THIS ENDPOINT IS NOT FULLY IMPLEMENTED YET**
-         *
-         * More info: https://docs.unusann.us/reference/api/v2/account/videoprogress#set-video-progress
-         *
-         * @param uid String; 32 character user ID; Required parameter
-         * @param loginKey String; 16 character login key/token; Required parameter
-         * @param uaid String; Unus Annus video ID. Example `s01.e001`; Required parameter
-         * @param progress Integer; Amount of seconds watched in video; Required parameter
-         */
-        set(uid: string, loginKey: string, uaid: string, progress: number): Promise<VideoProgress> {
-          return makePOSTRequest(`${apiUrl}/v2/account/videoprogress/set`, { uid, loginKey, uaid, progress });
-        },
-      },
-      /**
-       * Changes the user's profile picture
-       *
-       * More info: https://docs.unusann.us/reference/api/v2/account/changepfp
-       *
-       * @param pfp ReadStream | Path to file; Image file attached to body; Required parameter
-       * @param loginKey 16 character login key/token; Required parameter
-       */
-      changepfp(pfp: fs.ReadStream | string, loginKey: string): Promise<ChangePFPResponse> {
-        const formData = new FormData();
-        formData.append("loginKey", loginKey);
-        if (typeof pfp === "string") {
-          //Is file path
-          const splitPath = pfp.replace(/\\/g, "/").split("/");
-          const filename = splitPath[splitPath.length - 1];
-          formData.append(filename, fs.createReadStream(pfp));
-        } else if (typeof pfp === typeof fs.ReadStream) {
-          //Is ReadStream
-          const splitPath = (<string>pfp.path).replace(/\\/g, "/").split("/");
-          const filename = splitPath[splitPath.length - 1];
-          formData.append(filename, pfp);
-        }
-        return new Promise((resolve, reject) => {
-          axios
-            .post(`${apiUrl}/v2/account/changepfp`, formData, {
-              headers: formData.getHeaders(),
-            })
-            .then((res) => {
-              resolve(res.data);
-            })
-            .catch(reject);
-        });
-      },
-      /**
-       * Check the user's login key to see if they're logged in
-       *
-       * More info: https://docs.unusann.us/reference/api/v2/account/checkloginkey
-       *
-       * @param loginKey String; 16 character login key/token; Required parameter
-       */
-      checkloginkey(loginKey: string): Promise<CheckLoginKeyResponse> {
-        return makePOSTRequest(`${apiUrl}/v2/account/checkloginkey`, { loginKey });
-      },
-      /**
-       * More info: https://docs.unusann.us/reference/api/v2/account/login
-       *
-       * @param username String; The user's username or email. If this field has an @ symbol in it, it will be processed as an email; otherwise it will be processed as a username. Required parameter
-       * @param password String; Required parameter
-       * @param sendEmail Boolean; Whether to send an email to the user after they login. This is always true unless the user creates an account for the first time. Optional parameter; will default to `true` if not provided.
-       */
-      login(username: string, password: string, sendEmail?: boolean): Promise<LoginResponse> {
-        return makePOSTRequest(`${apiUrl}/v2/account/login`, { username, password, sendEmail });
-      },
-      /**
-       * More info: https://docs.unusann.us/reference/api/v2/account/logout
-       *
-       * @param loginKeys String[]; Array of 16 character login keys/tokens to logout or `["*"]` to logout all. Either this parameter, or `loginKey` is required in the request.
-       * @param loginKey String; 16 character login key/token to logout singular device. Either this parameter, or `loginKeys` is required in the request.
-       * @param id String; 32 character user ID; Required parameter
-       */
-      logout(id: string, loginKeys?: string[], loginKey?: string): Promise<LogoutResponse> {
-        return makePOSTRequest(`${apiUrl}/v2/account/logout`, { id, loginKeys, loginKey });
-      },
-      /**
-       * More info: https://docs.unusann.us/reference/api/v2/account/signup
-       *
-       * @param email String; The user's email address; Required parameter
-       * @param username String; The user's username; Required parameter
-       * @param password String; The user's password; Required parameter
-       * @param confirmpassword String; The user's password again as confirmation that it's correct. Required parameter
-       */
-      signup(email: string, username: string, password: string, confirmpassword: string): Promise<SignupResponse> {
-        return makePOSTRequest(`${apiUrl}/v2/account/signup`, { email, username, password, confirmpassword });
-      },
-    },
-    comments: {
-      /**
-       * Gets a segmented list of comments from the specified video
-       *
-       * More info: https://docs.unusann.us/reference/api/v2/comments#get-comments
-       *
-       * @param video String; Unus Annus video ID. Example: `s01.e001`; Required parameter
-       * @param from Integer | String; Select the first index for the segment of comments to recieve. Optional parameter; defaults to `0`
-       * @param to Integer | String; Selects the last index for the segment of comments to recieve. Optional parameter; defaults to `20`
-       */
-      get(video: string, from?: number | string, to?: number | string): Promise<Comment[]> {
-        var query: string = "?";
-        if (from) {
-          var From: string;
-          if (typeof from === "number") {
-            From = from.toString();
-          } else {
-            From = from;
-          }
-          query += `from=${From}`;
-        }
-        if (to) {
-          var To: string;
-          if (typeof to === "number") {
-            To = to.toString();
-          } else {
-            To = to;
-          }
-          query += `to=${To}`;
-        }
-
-        if (query === "?") {
-          query = "";
-        }
-
-        return makeRequest(`${apiUrl}/v2/comments/get/${video}${query}`);
-      },
-      /**
-       * Posts a comment on the specified video
-       *
-       * More info: https://docs.unusann.us/reference/api/v2/comments#post-comment
-       *
-       * @param video String; Unus Annus video ID. Example: `s01.e001`; Required parameter
-       * @param comment String; Comment data. Limited Markdown is accepted. Required parameter
-       * @param loginKey String; 16 character login key/token; Required parameter
-       */
-      post(video: string, comment: string, loginKey: string): Promise<PostCommentResponse> {
-        return makePOSTRequest(`${apiUrl}/v2/comments/post/${video}`, { comment, loginKey });
-      },
-    },
-    metadata: {
-      season: {
-        /**
-         * This endpoint returns an array of all the episodes in season 0 (specials), in order.
-         *
-         * More info: https://docs.unusann.us/reference/api/v2/metadata/season#get-specials-metadata
-         */
-        s00(): Promise<Array<Episode & OldEpisode>> {
-          return makeRequest(`${apiUrl}/v2/metadata/season/s00`);
-        },
-        /**
-         * This endpoint returns an array of all the episodes in season 1, in order.
-         *
-         * More info: https://docs.unusann.us/reference/api/v2/metadata/season#get-season-1-metadata
-         */
-        s01(): Promise<Array<Episode & OldEpisode>> {
-          return makeRequest(`${apiUrl}/v2/metadata/season/s01`);
-        },
-      },
-      /**
        * This endpoint returns an array, with another nested array for each season, which contains all the video objects for that season, in order.
        *
-       * More info: https://docs.unusann.us/reference/api/v2/metadata/all
+       * #### Responses
+       * * 200: OK
+       *
+       * @returns
+       * * 200: OK
+       *   * Type: `Promise<Episode[][]>`
+       *
+       * @see {@link https://docs.unusann.us/endpoints/api/v1/getallmetadata}
        */
-      all(): Promise<Array<Episode & OldEpisode>[]> {
-        return makeRequest(`${apiUrl}/v2/metadata/all`);
+      getallmetadata: () => {
+        return makeRequest<Episode[][]>(`${this.apiUrl}/v1/getallmetadata`);
       },
       /**
+       * ### Get Specials Metadata
+       * #### `/v1/gets00metadata`
+       *
+       * This endpoint returns an array of all the episodes in season 0 (specials), in order.
+       *
+       * @returns
+       * * 200: OK
+       *   * Type: `Promise<Episode[]>`
+       *
+       * @see {@link https://docs.unusann.us/endpoints/api/v1/gets00metadata}
+       */
+      gets00metadata: () => {
+        return makeRequest<Episode[]>(`${this.apiUrl}/v1/gets00metadata`);
+      },
+      /**
+       * ### Get Season 1 Metadata
+       * #### `/v1/gets01metadata`
+       *
+       * This endpoint returns an array of all the episodes in season 1, in order.
+       *
+       * @returns
+       * * 200: OK
+       *   * Type: `Promise<Episode
+       *
+       * @see {@link https://docs.unusann.us/endpoints/api/v1/gets01metadata}
+       */
+      gets01metadata: () => {
+        return makeRequest<Episode[]>(`${this.apiUrl}/v1/gets01metadata`);
+      },
+      /**
+       * ### Get Video Data
+       * #### `/v1/getvideodata/{video}`
+       *
        * This endpoint accepts a video ID as a path parameter and returns the specified video object.
        *
-       * An example request would be `TUAA.v2.metadata.episode("s01.e001")`
+       * An example request path would be `/v1/metadata/s01.e001`.
        *
-       * More info: https://docs.unusann.us/reference/api/v2/metadata/episode
+       * @param video
+       * * Type: `string`
+       * * Unus Annus video ID
+       * * Example: `s01.e001`
+       * * Required parameter
+       * @returns
+       * * 200: OK
+       *   * Type: `Promise<Episode>`
+       * * 404: Not Found
+       * ```json
+       * {
+       *   "error": {
+       *     "number": 404,
+       *     "code": "ERRNOTFOUND",
+       *     "message": "404 Not Found! The resource you are trying to access does not exist."
+       *   }
+       * }
+       * ```
        *
-       * @param video String; Unus Annus video ID. Example `s01.e001`; Required parameter
+       * @see {@link https://docs.unusann.us/endpoints/api/v1/getvideodata}
        */
-      episode(video: string): Promise<Episode & OldEpisode> {
-        return makeRequest(`${apiUrl}/v2/metadata/episode/${video}`);
+      getvideodata: (video: string) => {
+        return makeRequest<Episode>(`${this.apiUrl}/v1/getvideodata/${video}`);
+      },
+      /**
+       * ### Get Video Previews
+       * #### `/v1/getvidpreviews/{video}`
+       *
+       * This endpoint accepts a video ID as a path parameter and returns the specified previews in the WEBVTT format.
+       *
+       * An example request path would be `/v1/getvidpreviews/s01.e001`.
+       *
+       * @param video
+       * * Type: `string`
+       * * Unus Annus video ID
+       * * Example: `s01.e001`
+       * * Required parameter
+       * @returns
+       * * 200: OK
+       *   * Type: `Promise<string>`
+       * * 404: Not Found
+       * ```json
+       * {
+       *   "error": {
+       *     "number": 404,
+       *     "code": "ERRNOTFOUND",
+       *     "message": "404 Not Found! The resource you are trying to access does not exist."
+       *   }
+       * }
+       * ```
+       *
+       * @see {@link https://docs.unusann.us/endpoints/api/v1/getvidpreviews}
+       */
+      getvidpreviews: (video: string) => {
+        return makeRequest<string>(`${this.apiUrl}/v1/getvidpreviews/${video}`);
+      },
+    },
+    v2: {
+      metadata: {
+        /**
+         * ### Get Episode Data
+         * #### `/v2/metadata/episode/{video}`
+         *
+         * This endpoint accepts a video ID as a path parameter and returns the specified video object.
+         *
+         * An example request path would be `/v2/metadata/episode/s01.e001`.
+         *
+         * @param video
+         * * Type: `string`
+         * * Unus Annus video ID
+         * * Example: `s01.e001`
+         * * Required parameter
+         * @returns
+         * * 200: OK
+         *   * Type: `Promise<Episode>`
+         * * 404: Not Found
+         * ```json
+         * {
+         *   "error": {
+         *     "number": 404,
+         *     "code": "ERRNOTFOUND",
+         *     "message": "404 Not Found! The resource you are trying to access does not exist."
+         *   }
+         * }
+         * ```
+         *
+         * @see {@link https://docs.unusann.us/endpoints/api/v2/metadata/episode}
+         */
+        episode: (video: string) => {
+          return makeRequest<Episode>(`${this.apiUrl}/v2/metadata/episode/${video}`);
+        },
+        season: {
+          /**
+           * ### Get Specials Metadata
+           * #### `/v2/metadata/season/00`
+           *
+           * This endpoint returns an array of all the episodes in season 0 (specials), in order.
+           *
+           * @returns
+           * * 200: OK
+           *   * Type: `Promise<Episode[]>`
+           *
+           * @see {@link https://docs.unusann.us/endpoints/api/v2/metadata/season#get-specials-metadata}
+           */
+          s00: () => {
+            return makeRequest<Episode[]>(`${this.apiUrl}/v2/metadata/season/s00`);
+          },
+          /**
+           * ### Get Season 1 Metadata
+           * #### `/v2/metadata/season/01`
+           *
+           * This endpoint returns an array of all the episodes in season 1, in order.
+           *
+           * @returns
+           * * 200: OK
+           *   * Type: `Promise<Episode[]>`
+           *
+           * @see {@link https://docs.unusann.us/endpoints/api/v2/metadata/season#get-season-1-metadata}
+           */
+          s01: () => {
+            return makeRequest<Episode[]>(`${this.apiUrl}/v2/metadata/season/s01`);
+          },
+        },
+        /**
+         * ### Get All Metadata
+         * #### `/v2/metadata/all`
+         *
+         * This endpoint returns an array, with another nested array for each season, which contains all the video objects for that season, in order.
+         *
+         * @returns
+         * * 200: OK
+         *   * Type: `Promise<Episode[][]>`
+         *
+         * @see {@link https://docs.unusann.us/endpoints/api/v2/metadata/all}
+         */
+        all: () => {
+          return makeRequest<Episode[][]>(`${this.apiUrl}/v2/metadata/all`);
+        },
+      },
+      /**
+       * ### Get Video Previews
+       * #### `/v2/preview/{video}`
+       *
+       * This endpoint accepts a video ID as a path parameter and returns the specified previews in the WEBTVTT format.
+       *
+       * An example request path would be `/v2/preview/{s01.e001}`
+       *
+       * @param video
+       * * Type: `string`
+       * * Unus Annus video ID
+       * * Example: `s01.e001`
+       * * Required parameter
+       * @returns
+       * * 200: OK
+       *   * Type: `Promise<string>`
+       * * 404: Not Found
+       * ```json
+       * {
+       *   "error": {
+       *     "number": 404,
+       *     "code": "ERRNOTFOUND",
+       *     "message": "404 Not Found! The resource you are trying to access does not exist."
+       *   }
+       * }
+       * ```
+       *
+       * @see {@link https://docs.unusann.us/endpoints/api/v2/preview}
+       */
+      preview: (video: string) => {
+        return makeRequest<string>(`${this.apiUrl}/v2/preview/${video}`);
       },
     },
     /**
-     * This endpoint accepts a video ID as a path parameter and returns the specified previews in the WEBVTT format.
+     * ### Get Video Subtitles
+     * #### `/subtitles`
      *
-     * An example call of this function would be `TUAA.v2.preview("s01.e001")`
+     * @param url
+     * * Type: `string`
+     * * Path to subtitles
+     * * Example: `https://usc1.contabostorage.com/a7f68355d8c442d8a7a1076a0ac5d924:videos/subs/01/001.en.vtt`
+     * * Only accepts the following patterns:
+     *   * `https://usc1.contabostorage.com/a7f68355d8c442d8a7a1076a0ac5d924:videos/subs/*`
+     *   * `https://cdn.unusann.us/subs/*`
+     *   * `https://cdn.unusannusarchive.tk/subs/*`
+     * * Required parameter
+     * @returns
+     * * 200: OK
+     *   * Type: `Promise<string>`
+     *   * WEBVTT response
+     * * 403: Forbidden
+     *   * Sent if the `url` parameter is invalid
+     * ```json
+     * {
+     *   "error": "Unauthorized website/path!"
+     * }
+     * ```
+     * * 500: Internal Server Error
+     *   * Sent if the `url` parameter returns an invalid response or if the server encountered an error
+     * ```json
+     * {
+     *   "error": "Server error"
+     * }
+     * ```
      *
-     * More info: https://docs.unusann.us/reference/api/v2/preview
-     *
-     * @param video String; Unus Annus video ID; Example: `s01.e001`; Required parameter
+     * @see {@link https://docs.unusann.us/endpoints/api/subtitles}
      */
-    preview(video: string): Promise<string> {
-      return makeRequest(`${apiUrl}/v2/preview/${video}`);
+    subtitles: (url: string) => {
+      return makeRequest<string>(`${this.apiUrl}/subtitles?url=${encodeURIComponent(url)}`);
     },
   };
 
-  /**
-   * More info: https://docs.unusann.us/reference/api/subtitles
-   *
-   * @param url String
-   *
-   * Path to subtitles. Example: ```https://usc1.contabostorage.com/a7f68355d8c442d8a7a1076a0ac5d924:videos/subs/01/001.en.vtt```
-   *
-   * Only accepts the following patterns:
-   * * `https://usc1.contabostorage.com/a7f68355d8c442d8a7a1076a0ac5d924:videos/subs/*`
-   * * `https://cdn.unusann.us/subs/*`
-   * * `https://cdn.unusannusarchive.tk/subs/*`
-   *
-   * Required parameter
-   */
-  subtitles(url: string): Promise<string> {
-    return makeRequest(`${apiUrl}/subtitles?url=${encodeURIComponent(url)}`);
-  }
+  metadata = this.endpoints.v2.metadata;
+  preview = this.endpoints.v2.preview;
+  subtitles = this.endpoints.subtitles;
+
+  account = {
+    /**
+     * ### Change Profile Picture
+     *
+     * Changes the user's profile picture
+     *
+     * @param pfp
+     * * Type: `string | Buffer`
+     * * Path to Buffer of image
+     * @returns Promise<Record>
+     * * Success
+     *   * `Promise<Record>`
+     * * Error
+     *   * Throws error
+     */
+    changepfp: async (pfp: string | Buffer) => {
+      let image: Buffer;
+
+      if (typeof pfp === "string") {
+        image = fs.readFileSync(pfp);
+      } else {
+        image = pfp;
+      }
+
+      const formData = new FormData();
+      formData.append("avatar", image);
+
+      return await this.pb.records.update("profiles", this.pbUser.profile.id);
+    },
+    /**
+     * ### Login
+     *
+     * @param email
+     * * Type: `string`
+     * * The user's email
+     * * Required parameter
+     * @param password
+     * * Type: `string`
+     * * The user's password
+     * * Required parameter
+     * @returns
+     * * Success
+     *   * `Promise<UserAuthResponse>` (see below)
+     * ```ts
+     * interface UserAuthResponse {
+     *   [key: string]: any;
+     *   token: string;
+     *   user: User;
+     * }
+     * ```
+     * * Error
+     *   * Throws error
+     */
+    login: async (email: string, password: string) => {
+      const res = await this.pb.users.authViaEmail(email, password);
+      this.pbUser = res.user;
+      return res;
+    },
+    /**
+     * ### Logout
+     *
+     * @returns void
+     */
+    logout: () => {
+      return this.pb.authStore.clear();
+    },
+    /**
+     * ### Signup
+     *
+     * @param username
+     * * Type: `string`
+     * * The user's username
+     * * Required parameter
+     * @param email
+     * * Type: `string`
+     * * The user's email address
+     * * Required parameter
+     * @param password
+     * * Type: `string`
+     * * The user's password
+     * * Required parameter
+     * @param passwordConfirm
+     * * Type: `string`
+     * * The user's password again as confirmation that it's correct
+     * * Required parameter
+     *
+     * @returns
+     * * Success
+     *   * `Promise<User>`
+     * * Error
+     *   * Throws error
+     */
+    signup: async (username: string, email: string, password: string, passwordConfirm: string) => {
+      const pbUser = await this.pb.users.create({ email, password, passwordConfirm });
+
+      await this.pb.users.authViaEmail(email, password);
+
+      await this.pb.records.update("profiles", pbUser.profile.id, {
+        name: username,
+        emails_account: true,
+        emails_updates: false,
+      });
+
+      await this.pb.users.requestVerification(email);
+
+      const user = await this.pb.users.getOne(pbUser.id);
+      return (this.pbUser = user);
+    },
+    /**
+     * ### Set Email Preferences
+     *
+     * Sets the user's email preferences
+     *
+     * @param preferences
+     * * Type: `EmailPreferences` (see below)
+     * * Required parameter; values in object are optional
+     *
+     * #### Interface
+     * ```ts
+     * interface EmailPreferences {
+     *   account?: boolean;
+     *   updates?: boolean;
+     * }
+     * ```
+     * @returns
+     * * Success
+     *   * `Promise<User>`
+     * * Error
+     *   * Throws error
+     */
+    setEmailPreferences: async (preferences: EmailPreferences) => {
+      await this.pb.records.update("profiles", this.pbUser.profile.id, {
+        emails_account: preferences.account,
+        emails_updates: preferences.updates,
+      });
+
+      this.pbUser.profile.emails_account = preferences.account;
+      this.pbUser.profile.emails_updates = preferences.updates;
+
+      return this.pbUser;
+    },
+    /**
+     * ### Send Email Verification
+     *
+     * @returns
+     * * Success
+     *   * Type: `Promise<boolean>`
+     * * Error
+     *   * Throws error
+     */
+    sendEmailVerification: () => {
+      return this.pb.users.requestVerification(this.pbUser.email);
+    },
+    /**
+     * ### Reset Email
+     *
+     * Sends an email to the email in `newEmail` to verify changing the account's email.
+     *
+     * @param newEmail
+     * * Type: `string`
+     * * Required parameter
+     * @returns
+     * * Success
+     *   * Type: `Promise<boolean>`
+     * * Error
+     *   * Throws error
+     */
+    resetEmail: (newEmail: string) => {
+      return this.pb.users.requestEmailChange(newEmail);
+    },
+    /**
+     * ### Reset Password
+     *
+     * Sends a password reset email to the user's email address.
+     *
+     * @returns
+     * * Success
+     *   * Type: `Promise<boolean>`
+     * * Error
+     *   * Throws error
+     */
+    resetPassword: () => {
+      return this.pb.users.requestPasswordReset(this.pbUser.email);
+    },
+    /**
+     * ### Delete Account
+     *
+     * Deletes the user's account if `password` and `confirmPassword` match.
+     *
+     * @param password
+     * * Type: `string`
+     * * Required parameter
+     * @param confirmPassword
+     * * Type: `string`
+     * * Required parameter
+     * @returns
+     * * Success
+     *   * Type: `Promise<boolean>`
+     * * Invalid login
+     *   * Throws `"Invalid login!"`
+     * * Passwords don't match
+     *   * Throws `"Password and confirm password do not match!"`
+     * * Error
+     *   * Throws error
+     */
+    deleteAccount: async (password: string, confirmPassword: string) => {
+      if (password === confirmPassword) {
+        const res = await this.pb.users.authViaEmail(this.pbUser.email, password);
+        if (res.token) {
+          const deleteRes = await this.pb.users.delete(res.user.id);
+          return deleteRes;
+        } else {
+          throw "Invalid login!";
+        }
+      } else {
+        throw "Password and confirm password do not match!";
+      }
+    },
+  };
+
+  comments = {
+    /**
+     * ### Get comments
+     *
+     * Gets the comments for a specific video
+     *
+     * @param video
+     * * Type: `string`
+     * * Unus Annus video ID
+     * * Required parameter
+     * @param sort
+     * * Type: `CommentSortTypes` (see below)
+     * * Required Parameter
+     * ```ts
+     * export type CommentSortTypes = "latest" | "oldest" | "rating";
+     * ```
+     * @param page
+     * * Type: `number`
+     * * Default: `1`
+     * * Which page of comments to display
+     * * Optional parameter
+     * @param perPage
+     * * Type: `number`
+     * * Default: `400`
+     * * How many comments to display per page
+     * * Optional parameter
+     * @returns
+     * * Success
+     *   * Type: `Promise<Record[]>`
+     * * Error
+     *   * Throws error
+     */
+    getComments: async (video: string, sort: CommentSortTypes, page: number = 1, perPage: number = 400) => {
+      const comments = (
+        await this.pb.records.getList("comments", page, perPage, {
+          filter: `episode="${video}"`,
+          $autoCancel: false,
+        })
+      ).items;
+
+      if (sort === "latest" || sort === "oldest") {
+        comments.sort((aDate, bDate) => {
+          const a = moment.utc(aDate.created).unix();
+          const b = moment.utc(bDate.created).unix();
+
+          if (a > b) {
+            return -1;
+          } else if (a < b) {
+            return 1;
+          } else if (a === b) {
+            return 0;
+          }
+        });
+      } else if (sort === "rating") {
+        comments.sort((a, b) => {
+          const ratingA = a.likes - a.dislikes;
+          const ratingB = b.likes - b.dislikes;
+
+          if (ratingA > ratingB) {
+            return -1;
+          } else if (ratingA < ratingB) {
+            return 1;
+          } else if (ratingA === ratingB) {
+            const timeA = moment.utc(a.created).unix();
+            const timeB = moment.utc(b.created).unix();
+
+            if (timeA > timeB) {
+              return -1;
+            } else if (timeA < timeB) {
+              return 1;
+            } else if (timeA === timeB) {
+              return 0;
+            }
+          }
+        });
+      }
+
+      if (sort === "oldest") {
+        comments.reverse();
+      }
+
+      return comments;
+    },
+    /**
+     * ### Post Comment
+     *
+     * @param episode
+     * * Type: `string`
+     * * Unus Annus video ID
+     * * Required parameter
+     * @param markdown
+     * * Type: `string`
+     * * Comment Markdown
+     * * Required parameter
+     * @returns
+     * * Success
+     *   * Type: `Promise<Record>`
+     * * Error
+     *   * Throws error
+     */
+    postComment: async (episode: string, markdown: string) => {
+      const commentText = markdown.trim();
+
+      if (commentText.length === 0) {
+        return;
+      }
+
+      return await this.pb.records.create("comments", {
+        episode,
+        markdown: commentText,
+        user: this.pbUser.id,
+      });
+    },
+    /**
+     * ### Delete Comment
+     *
+     * @param commentId
+     * * Type: `string`
+     * * The comment's ID
+     * * Required parameter
+     * @returns
+     * * Success
+     *   * Type: `Promise<boolean`
+     * * Error
+     *   * Throws error
+     */
+    deleteComment: (commentId: string) => {
+      return this.pb.records.delete("comments", commentId);
+    },
+    /**
+     * ### Edit Comment
+     *
+     * @param commentId
+     * * Type: `string`
+     * * The comment's ID
+     * * Required parameter
+     * @param markdown
+     * * Type: `string`
+     * * Comment Markdown
+     * * Required parameter
+     * @returns
+     * * Success
+     *   * Type: `Promise<Record>`
+     * * Error
+     *   * Throws error
+     */
+    editComment: (commentId: string, markdown: string) => {
+      const commentText = markdown.trim();
+
+      if (commentText.length === 0) {
+        return;
+      }
+
+      return this.pb.records.update("comments", commentId, {
+        markdown: commentText,
+        isEdited: true,
+      });
+    },
+  };
 }
 
-function makeRequest(url: string): any {
+function makeRequest<T>(url: string): Promise<T> {
   return new Promise((resolve, reject) => {
     axios
       .get(url)
@@ -330,227 +720,4 @@ function makeRequest(url: string): any {
       })
       .catch(reject);
   });
-}
-
-function makePOSTRequest(url: string, data: any): any {
-  return new Promise((resolve, reject) => {
-    axios
-      .post(url, data)
-      .then((res) => {
-        resolve(res.data);
-      })
-      .catch(reject);
-  });
-}
-
-export interface VideoProgress {
-  uaid: string;
-  progress: number;
-}
-
-export interface RokuFeed {
-  providerName: "The Unus Annus Archive";
-  lastUpdated: string;
-  language: "en";
-  playlists: RokuPlaylist[];
-  series: RokuSeries[];
-}
-
-export interface RokuPlaylist {
-  name: "Specials" | "Season 1";
-  itemIds: string[];
-}
-
-export interface RokuSeries {
-  id: "UnusAnnus";
-  title: "Unus Annus";
-  seasons: RokuSeason[];
-  genres: ["comedy"];
-  thumbnail: "https://cdn.unusann.us/roku-assets/series-thumbnail.jpg";
-  releaseDate: "2019-11-15";
-  shortDescription: '"What would you do if you only had a year left to live? Would you squander the time you were given? Or would you make every second count? Welcome to Unus Annus. In exactly 365 days this channel will be...';
-  longDescription: "What would you do if you only had a year left to live? Would you squander the time you were given? Or would you make every second count? Welcome to Unus Annus. In exactly 365 days this channel will be deleted along with all of the daily uploads accumulated since then. Nothing will be saved. Nothing will be reuploaded. This is your one chance to join us at the onset of our adventure. To be there from the beginning. To make every second count. Subscribe now and relish what little time we have left or have the choice made for you as we disappear from existence forever. But remember... everything has an end. Even you. Memento mori. Unus annus.";
-}
-
-export interface RokuSeason {
-  seasonNumber: "0" | "1";
-  episodes: RokuEpisode[];
-}
-
-export interface RokuEpisode {
-  id: string;
-  title: string;
-  content: RokuEpisodeContent;
-  thumbnail: string;
-  releaseDate: string;
-  episodeNumber: number;
-  shortDescription: "This episode doesn't have a description" | string;
-  longDescription?: string;
-}
-
-export interface RokuEpisodeContent {
-  dateAdded: string;
-  videos: RokuVideo[];
-  duration: number;
-  captions: RokuCaption[];
-  language: "en";
-}
-
-export interface RokuVideo {
-  url: string;
-  quality: "UHD" | "FHD" | "HD" | "SD";
-  videoType: "MP4";
-}
-
-export interface RokuCaption {
-  url: string;
-  language: string;
-  captionType: "SUBTITLE";
-}
-
-export interface SwiftGetAllMetadata {
-  specials: Array<Episode & OldEpisode>;
-  season1: Array<Episode & OldEpisode>;
-}
-
-export interface Episode {
-  sources: Source[];
-  tracks: Track[];
-  posters: Poster[];
-  season: 0 | 1;
-  episode: number;
-  title: string;
-  description: string;
-  date: number;
-  duration: number;
-  islast?: boolean;
-}
-
-export interface Source {
-  src: string;
-  type: "video/mp4";
-  size: number;
-}
-
-export interface Track {
-  kind: "captions";
-  label: string;
-  srclang: string;
-  src: string;
-}
-
-export interface Poster {
-  src: string;
-  type: "image/webp" | "image/jpeg";
-}
-
-export interface OldEpisode {
-  video: string;
-  season: 0 | 1;
-  episode: number;
-  title: string;
-  description: string;
-  releasedate: number;
-  thumbnail: string;
-  islast?: boolean;
-}
-
-export interface Song {
-  audio: string;
-  title: string;
-  type: string;
-  artist: string;
-  thumbnail: string;
-  i: string;
-  number: number;
-  islastsong?: boolean;
-}
-
-export interface ChangePFPResponse {
-  status?: "success" | string;
-  error?: "Not logged in!" | string;
-}
-
-export interface CheckLoginKeyResponse {
-  isValid: boolean;
-  user?: LimitedUser;
-}
-
-export interface LimitedUser {
-  id: string;
-  email: string;
-  username: string;
-  pfp: UserPFP;
-}
-
-export interface UserPFP {
-  originalFilename: string;
-  filename: string;
-  width: number;
-  height: number;
-  format: "image/jpeg";
-}
-
-export interface LoginResponse {
-  isValid?: boolean;
-  loginKey?: string;
-  user?: LimitedUser;
-}
-
-export interface LogoutResponse {
-  status: "success" | "error";
-  error?: "Account does not exist!" | string;
-}
-
-export interface SignupResponse {
-  success: boolean;
-  loginURI?: "/api/v2/account/login";
-  error?: {
-    code: 0 | 1 | 2 | number;
-    message: "Passwords do not match!" | "Account exists!" | "Missing info!" | string;
-  };
-}
-
-export interface Comment {
-  episode: string;
-  uid: string;
-  comment: CommentBody;
-  stats: CommentStats;
-  user: CommentUser;
-}
-
-export interface CommentBody {
-  plaintext: string;
-  html: string;
-}
-
-export interface CommentStats {
-  published: number;
-  likes: number;
-  dislikes: number;
-}
-
-export interface CommentUser {
-  id: string;
-  username: string;
-  pfp: UserPFP;
-}
-
-export interface PostCommentResponse {
-  status?: "success";
-  comment?: Comment;
-  error?: {
-    code: 3 | "401" | number | string;
-    message: "Invalid message length!" | "Unauthorized!" | string;
-  };
-}
-
-export interface FileSizeResponse {
-  filesize: {
-    bytes: number;
-    kb: number;
-    mb: number;
-    gb: number;
-    tb: number;
-  };
 }

@@ -1,6 +1,6 @@
 {
   "name": "tuaa-api",
-  "version": "2.0.3",
+  "version": "3.0.0",
   "description": "",
   "main": "src/main.js",
   "types": "src/main.d.ts",
@@ -12,7 +12,9 @@
   "license": "ISC",
   "dependencies": {
     "axios": "^0.21.1",
-    "form-data": "^4.0.0"
+    "form-data": "^4.0.0",
+    "moment": "^2.29.4",
+    "pocketbase": "^0.7.1"
   },
   "devDependencies": {
     "@types/axios": "^0.14.0",
